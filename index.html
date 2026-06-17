@@ -487,6 +487,14 @@
         }
       ],
 
+      groupWeights: {
+        mood: 2,
+        hunger: 3,
+        other: 4
+      },
+
+      topCount: 3,
+
       foodPools: {
         "心情美丽": ["超级碗", "食其家", "海南椰子鸡", "鲜虾云吞", "吃点水果算了"],
         "没什么特别": ["牛羊肉米粉", "面", "饺子", "中餐", "食其家"],
@@ -685,61 +693,67 @@
             });
           }
 
-          function uniqueList(list) {
-            var result = [];
-
-            list.forEach(function (item) {
-              if (result.indexOf(item) === -1) {
-                result.push(item);
-              }
-            });
-
-            return result;
-          }
-
-          function intersectLists(lists) {
-            if (lists.length === 0) {
-              return [];
-            }
-
-            return lists[0].filter(function (item) {
-              return lists.every(function (list) {
-                return list.indexOf(item) !== -1;
-              });
-            });
-          }
-
           function pickFood(excludeCurrentRound) {
-            var pools = RECOMMEND_CONFIG.groups.map(function (group) {
-              return RECOMMEND_CONFIG.foodPools[selected[group.key]] || [];
-            }).filter(function (pool) {
-              return pool.length > 0;
-            });
-            var intersection = uniqueList(intersectLists(pools));
-            var merged = uniqueList([].concat.apply([], pools));
-            var candidates = intersection.length > 0 ? intersection : merged;
+            var scoredFoods = scoreFoods();
+            var candidates = getTopFoods(scoredFoods);
 
             candidates = avoidRecentFoods(candidates);
 
             if (excludeCurrentRound && currentRoundFoods.length > 0) {
-              var freshCandidates = candidates.filter(function (food) {
-                return currentRoundFoods.indexOf(food) === -1;
+              var freshCandidates = candidates.filter(function (item) {
+                return currentRoundFoods.indexOf(item.name) === -1;
               });
 
               if (freshCandidates.length > 0) {
                 candidates = freshCandidates;
               } else if (candidates.length > 1 && currentFood) {
-                candidates = candidates.filter(function (food) {
-                  return food !== currentFood;
+                candidates = candidates.filter(function (item) {
+                  return item.name !== currentFood;
                 });
               }
             }
 
             if (candidates.length === 0) {
-              candidates = merged.length > 0 ? merged : ["今天先喝点热水"];
+              candidates = [{ name: "今天先喝点热水", score: 1 }];
             }
 
-            return candidates[Math.floor(Math.random() * candidates.length)];
+            return pickByScore(candidates);
+          }
+
+          function scoreFoods() {
+            var scoreMap = {};
+
+            RECOMMEND_CONFIG.groups.forEach(function (group) {
+              var option = selected[group.key];
+              var foods = RECOMMEND_CONFIG.foodPools[option] || [];
+              var groupWeight = RECOMMEND_CONFIG.groupWeights[group.key] || 1;
+
+              foods.forEach(function (food, index) {
+                var positionScore = Math.max(foods.length - index, 1);
+                var finalScore = positionScore * groupWeight;
+
+                if (!scoreMap[food]) {
+                  scoreMap[food] = {
+                    name: food,
+                    score: 0
+                  };
+                }
+
+                scoreMap[food].score += finalScore;
+              });
+            });
+
+            return Object.keys(scoreMap).map(function (food) {
+              return scoreMap[food];
+            }).sort(function (a, b) {
+              return b.score - a.score;
+            });
+          }
+
+          function getTopFoods(scoredFoods) {
+            var topCount = RECOMMEND_CONFIG.topCount || 3;
+
+            return scoredFoods.slice(0, topCount);
           }
 
           function avoidRecentFoods(candidates) {
@@ -747,24 +761,39 @@
               return item.result;
             });
             var lastFood = drawHistory.length > 0 ? drawHistory[0].result : "";
-            var filtered = candidates.filter(function (food) {
-              return food !== lastFood;
+            var filtered = candidates.filter(function (item) {
+              return item.name !== lastFood;
             });
 
             if (filtered.length === 0) {
               filtered = candidates.slice();
             }
 
-            var weighted = [];
-            filtered.forEach(function (food) {
-              var weight = recentFoods.indexOf(food) === -1 ? 4 : 1;
+            return filtered.map(function (item) {
+              var recentPenalty = recentFoods.indexOf(item.name) === -1 ? 1 : 0.35;
 
-              for (var i = 0; i < weight; i++) {
-                weighted.push(food);
-              }
+              return {
+                name: item.name,
+                score: Math.max(item.score * recentPenalty, 1)
+              };
             });
+          }
 
-            return weighted;
+          function pickByScore(candidates) {
+            var totalScore = candidates.reduce(function (sum, item) {
+              return sum + item.score;
+            }, 0);
+            var randomScore = Math.random() * totalScore;
+
+            for (var i = 0; i < candidates.length; i++) {
+              randomScore -= candidates[i].score;
+
+              if (randomScore <= 0) {
+                return candidates[i].name;
+              }
+            }
+
+            return candidates[candidates.length - 1].name;
           }
 
           function makeReason() {
