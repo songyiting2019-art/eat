@@ -495,21 +495,109 @@
 
       topCount: 3,
 
-      foodPools: {
-        "心情美丽": ["超级碗", "食其家", "海南椰子鸡", "鲜虾云吞", "吃点水果算了"],
-        "没什么特别": ["牛羊肉米粉", "面", "饺子", "中餐", "食其家"],
-        "有点忧伤": ["鲜虾云吞", "面", "饺子", "海南椰子鸡", "牛羊肉米粉"],
-        "非常沮丧": ["麦当劳", "猪脚饭", "食其家", "中餐两菜", "海南椰子鸡"],
+      foodList: [
+        "超级碗",
+        "食其家",
+        "海南椰子鸡",
+        "鲜虾云吞",
+        "吃点水果算了",
+        "牛羊肉米粉",
+        "面",
+        "饺子",
+        "中餐",
+        "麦当劳",
+        "猪脚饭",
+        "中餐两菜",
+        "不吃了"
+      ],
 
-        "不怎么饿": ["不吃了", "吃点水果算了", "鲜虾云吞", "面", "超级碗"],
-        "一般": ["牛羊肉米粉", "面", "鲜虾云吞", "饺子", "中餐"],
-        "有点饿": ["食其家", "牛羊肉米粉", "猪脚饭", "中餐两菜", "海南椰子鸡"],
-        "饿死了": ["猪脚饭", "麦当劳", "食其家", "中餐两菜", "牛羊肉米粉"],
+      scoreMaps: {
+        "心情美丽": {
+          "超级碗": 5,
+          "食其家": 4,
+          "海南椰子鸡": 3,
+          "鲜虾云吞": 2,
+          "吃点水果算了": 1
+        },
+        "没什么特别": {
+          "牛羊肉米粉": 5,
+          "面": 4,
+          "饺子": 3,
+          "中餐": 2,
+          "食其家": 1
+        },
+        "有点忧伤": {
+          "鲜虾云吞": 5,
+          "面": 4,
+          "饺子": 3,
+          "海南椰子鸡": 2,
+          "牛羊肉米粉": 1
+        },
+        "非常沮丧": {
+          "麦当劳": 5,
+          "猪脚饭": 4,
+          "食其家": 3,
+          "中餐两菜": 2,
+          "海南椰子鸡": 1
+        },
 
-        "减脂期": ["超级碗", "吃点水果算了", "鲜虾云吞", "海南椰子鸡", "不吃了"],
-        "长肉期": ["猪脚饭", "麦当劳", "食其家", "中餐两菜", "牛羊肉米粉"],
-        "放纵期": ["麦当劳", "猪脚饭", "食其家", "中餐两菜", "海南椰子鸡"],
-        "肚子痛": ["面", "鲜虾云吞", "饺子", "海南椰子鸡", "不吃了"]
+        "不怎么饿": {
+          "不吃了": 5,
+          "吃点水果算了": 4,
+          "鲜虾云吞": 3,
+          "面": 2,
+          "超级碗": 1
+        },
+        "一般": {
+          "牛羊肉米粉": 5,
+          "面": 4,
+          "鲜虾云吞": 3,
+          "饺子": 2,
+          "中餐": 1
+        },
+        "有点饿": {
+          "食其家": 5,
+          "牛羊肉米粉": 4,
+          "猪脚饭": 3,
+          "中餐两菜": 2,
+          "海南椰子鸡": 1
+        },
+        "饿死了": {
+          "猪脚饭": 5,
+          "麦当劳": 4,
+          "食其家": 3,
+          "中餐两菜": 2,
+          "牛羊肉米粉": 1
+        },
+
+        "减脂期": {
+          "超级碗": 5,
+          "吃点水果算了": 4,
+          "鲜虾云吞": 3,
+          "海南椰子鸡": 2,
+          "不吃了": 1
+        },
+        "长肉期": {
+          "猪脚饭": 5,
+          "麦当劳": 4,
+          "食其家": 3,
+          "中餐两菜": 2,
+          "牛羊肉米粉": 1
+        },
+        "放纵期": {
+          "麦当劳": 5,
+          "猪脚饭": 4,
+          "食其家": 3,
+          "中餐两菜": 2,
+          "海南椰子鸡": 1
+        },
+        "肚子痛": {
+          "面": 5,
+          "鲜虾云吞": 4,
+          "饺子": 3,
+          "海南椰子鸡": 2,
+          "不吃了": 1
+        }
       },
 
       reasons: {
@@ -697,54 +785,33 @@
             var scoredFoods = scoreFoods();
             var candidates = getTopFoods(scoredFoods);
 
-            candidates = avoidRecentFoods(candidates);
-
-            if (excludeCurrentRound && currentRoundFoods.length > 0) {
-              var freshCandidates = candidates.filter(function (item) {
-                return currentRoundFoods.indexOf(item.name) === -1;
-              });
-
-              if (freshCandidates.length > 0) {
-                candidates = freshCandidates;
-              } else if (candidates.length > 1 && currentFood) {
-                candidates = candidates.filter(function (item) {
-                  return item.name !== currentFood;
-                });
-              }
-            }
-
             if (candidates.length === 0) {
               candidates = [{ name: "今天先喝点热水", score: 1 }];
             }
 
-            return pickByScore(candidates);
+            candidates = adjustRepeatScores(candidates, excludeCurrentRound);
+
+            return pickFromTopFoods(candidates);
           }
 
           function scoreFoods() {
-            var scoreMap = {};
+            var foods = RECOMMEND_CONFIG.foodList || [];
 
-            RECOMMEND_CONFIG.groups.forEach(function (group) {
-              var option = selected[group.key];
-              var foods = RECOMMEND_CONFIG.foodPools[option] || [];
-              var groupWeight = RECOMMEND_CONFIG.groupWeights[group.key] || 1;
+            return foods.map(function (food) {
+              var totalScore = 0;
 
-              foods.forEach(function (food, index) {
-                var positionScore = Math.max(foods.length - index, 1);
-                var finalScore = positionScore * groupWeight;
+              RECOMMEND_CONFIG.groups.forEach(function (group) {
+                var option = selected[group.key];
+                var optionScoreMap = RECOMMEND_CONFIG.scoreMaps[option] || {};
+                var groupWeight = RECOMMEND_CONFIG.groupWeights[group.key] || 1;
 
-                if (!scoreMap[food]) {
-                  scoreMap[food] = {
-                    name: food,
-                    score: 0
-                  };
-                }
-
-                scoreMap[food].score += finalScore;
+                totalScore += (optionScoreMap[food] || 0) * groupWeight;
               });
-            });
 
-            return Object.keys(scoreMap).map(function (food) {
-              return scoreMap[food];
+              return {
+                name: food,
+                score: totalScore
+              };
             }).sort(function (a, b) {
               return b.score - a.score;
             });
@@ -756,33 +823,38 @@
             return scoredFoods.slice(0, topCount);
           }
 
-          function avoidRecentFoods(candidates) {
+          function adjustRepeatScores(candidates, excludeCurrentRound) {
             var recentFoods = drawHistory.slice(0, 3).map(function (item) {
               return item.result;
             });
             var lastFood = drawHistory.length > 0 ? drawHistory[0].result : "";
-            var filtered = candidates.filter(function (item) {
-              return item.name !== lastFood;
-            });
 
-            if (filtered.length === 0) {
-              filtered = candidates.slice();
-            }
-
-            return filtered.map(function (item) {
+            return candidates.map(function (item) {
               var recentPenalty = recentFoods.indexOf(item.name) === -1 ? 1 : 0.35;
+              var currentRoundPenalty = excludeCurrentRound && currentRoundFoods.indexOf(item.name) !== -1 ? 0.2 : 1;
+              var lastFoodPenalty = item.name === lastFood && candidates.length > 1 ? 0 : 1;
 
               return {
                 name: item.name,
-                score: Math.max(item.score * recentPenalty, 1)
+                score: Math.max(item.score * recentPenalty * currentRoundPenalty * lastFoodPenalty, 0)
               };
             });
           }
 
-          function pickByScore(candidates) {
+          function pickFromTopFoods(candidates) {
             var totalScore = candidates.reduce(function (sum, item) {
               return sum + item.score;
             }, 0);
+
+            if (totalScore <= 0) {
+              var fallbackCandidates = candidates.filter(function (item) {
+                return item.name !== currentFood;
+              });
+              var fallbackList = fallbackCandidates.length > 0 ? fallbackCandidates : candidates;
+
+              return fallbackList[Math.floor(Math.random() * fallbackList.length)].name;
+            }
+
             var randomScore = Math.random() * totalScore;
 
             for (var i = 0; i < candidates.length; i++) {
