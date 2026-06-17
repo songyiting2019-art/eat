@@ -118,6 +118,11 @@
       transform: translateY(-2px);
     }
 
+    .choice-button:active {
+      box-shadow: 0 2px 0 #e85f92;
+      transform: translateY(3px) scale(0.98);
+    }
+
     .main-actions,
     .result-actions {
       display: flex;
@@ -145,6 +150,11 @@
       transform: translateY(-1px);
     }
 
+    button:active {
+      box-shadow: 0 2px 0 #4fb095;
+      transform: translateY(4px) scale(0.98);
+    }
+
     button:disabled {
       cursor: not-allowed;
       opacity: 0.5;
@@ -156,15 +166,27 @@
       box-shadow: 0 6px 0 #e85f92;
     }
 
+    .primary-button:active {
+      box-shadow: 0 2px 0 #e85f92;
+    }
+
     .confirm-button {
       background: #75d49b;
       box-shadow: 0 6px 0 #4bbd78;
+    }
+
+    .confirm-button:active {
+      box-shadow: 0 2px 0 #4bbd78;
     }
 
     .again-button {
       color: #6b5060;
       background: #ffe07d;
       box-shadow: 0 6px 0 #eac049;
+    }
+
+    .again-button:active {
+      box-shadow: 0 2px 0 #eac049;
     }
 
     .clear-history {
@@ -175,6 +197,10 @@
       font-size: 14px;
       background: #ffe0ec;
       box-shadow: 0 4px 0 #f4adc7;
+    }
+
+    .clear-history:active {
+      box-shadow: 0 1px 0 #f4adc7;
     }
 
     .result-box {
@@ -525,6 +551,7 @@
           var selected = {};
           var currentFood = "";
           var currentReason = "";
+          var currentRoundFoods = [];
           var changeCount = 0;
           var eggTriggered = false;
           var drawHistory = loadHistory();
@@ -682,7 +709,7 @@
             });
           }
 
-          function pickFood() {
+          function pickFood(excludeCurrentRound) {
             var pools = RECOMMEND_CONFIG.groups.map(function (group) {
               return RECOMMEND_CONFIG.foodPools[selected[group.key]] || [];
             }).filter(function (pool) {
@@ -693,6 +720,20 @@
             var candidates = intersection.length > 0 ? intersection : merged;
 
             candidates = avoidRecentFoods(candidates);
+
+            if (excludeCurrentRound && currentRoundFoods.length > 0) {
+              var freshCandidates = candidates.filter(function (food) {
+                return currentRoundFoods.indexOf(food) === -1;
+              });
+
+              if (freshCandidates.length > 0) {
+                candidates = freshCandidates;
+              } else if (candidates.length > 1 && currentFood) {
+                candidates = candidates.filter(function (food) {
+                  return food !== currentFood;
+                });
+              }
+            }
 
             if (candidates.length === 0) {
               candidates = merged.length > 0 ? merged : ["今天先喝点热水"];
@@ -736,19 +777,21 @@
             return combinedReason || RECOMMEND_CONFIG.defaultReason;
           }
 
-          function showRecommendation() {
-            currentFood = pickFood();
+          function showRecommendation(excludeCurrentRound) {
+            currentFood = pickFood(excludeCurrentRound);
             currentReason = makeReason();
+            currentRoundFoods.push(currentFood);
             resultText.textContent = currentFood;
             reasonText.textContent = currentReason;
             resultBox.classList.add("show");
           }
 
           function startNewRound() {
+            currentRoundFoods = [];
             changeCount = 0;
             eggTriggered = false;
             eggAlert.classList.remove("show");
-            showRecommendation();
+            showRecommendation(false);
           }
 
           function changeRecommendation() {
@@ -759,7 +802,7 @@
               eggAlert.classList.add("show");
             }
 
-            showRecommendation();
+            showRecommendation(true);
           }
 
           function confirmRecommendation() {
